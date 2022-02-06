@@ -3,3 +3,7 @@ scipy
 numpy
 matplotlib
 requests
+pyarrow
+fastparquet
+ipdb
+pandarallel

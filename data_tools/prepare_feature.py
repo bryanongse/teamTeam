@@ -4,6 +4,7 @@ import os
 import logging
 
 import pandas as pd
+from pandarallel import pandarallel
 from scipy.interpolate import griddata, RegularGridInterpolator
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,6 +12,7 @@ import matplotlib.pyplot as plt
 CHUNKS = 1000
 ICHUNKS = 1000j
 
+pandarallel.initialize(nb_workers=16)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 
@@ -20,8 +22,8 @@ def get_interpolate_fn(geodf: pd.DataFrame,
 
     minlng, maxlng = geodf['rawlng'].min(), geodf['rawlng'].max()
     minlat, maxlat = geodf['rawlat'].min(), geodf['rawlat'].max()
-    print('lats limits', minlng, maxlng)
-    print('lngs limits', minlat, maxlat)
+    logging.info('lats limits', minlng, maxlng)
+    logging.info('lngs limits', minlat, maxlat)
     grid_x, grid_y = np.mgrid[minlng:maxlng:ICHUNKS, minlat:maxlat:ICHUNKS]
     grid = griddata(geofeature[['longitude', 'latitude']], 
                     geofeature[[feature_name]], 
@@ -45,13 +47,10 @@ def generate_plot(grid,
     plt.savefig(out_path)
 
 
-def get_feature(geodf: pd.DataFrame,
-                f):
-    
-    def interpolate_feature(x, f):
-        return f((x[1], x[0]))[0]
-    
-    return df[['rawlat', 'rawlng']].apply(interpolate_feature, args=(f,), axis=1)
+def get_feature(df: pd.DataFrame, f):
+    fn = lambda x: f((x[1], x[0]))[0]
+    res = df[['rawlat', 'rawlng']].parallel_apply(fn, axis=1)
+    return res
 
 
 if __name__ == '__main__':
@@ -72,8 +71,11 @@ if __name__ == '__main__':
     for i, df_path in enumerate(df_paths):
         df = pd.read_parquet(df_path)
         grid, f = get_interpolate_fn(df, feature_df, feature_name=args.feat_name)
-        generate_plot(grid, df, out_path=f'{args.out_folder}/{df_path}_heatmap.png')
+
+        filename = os.path.basename(df_path)
+        generate_plot(grid, df, out_path=f'{args.out_folder}/{filename}_heatmap.png')
 
         new_feature = get_feature(df, f)
         df[args.feat_name] = new_feature
-        df.to_parquet(f'{args.out_folder}/{df_path}_new.parquet')
+        df.to_parquet(f'{args.out_folder}/{filename}_new.parquet')
+        logging.info(f'Written file {args.out_folder}/{filename}_new.parquet, {i}/{len(df_paths)}')
