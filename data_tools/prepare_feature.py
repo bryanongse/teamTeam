@@ -22,8 +22,8 @@ def get_interpolate_fn(geodf: pd.DataFrame,
 
     minlng, maxlng = geodf['rawlng'].min(), geodf['rawlng'].max()
     minlat, maxlat = geodf['rawlat'].min(), geodf['rawlat'].max()
-    logging.info('lats limits', minlng, maxlng)
-    logging.info('lngs limits', minlat, maxlat)
+    logging.info(f'lats limits {minlng} {maxlng}')
+    logging.info(f'lngs limits {minlat} {maxlat}')
     grid_x, grid_y = np.mgrid[minlng:maxlng:ICHUNKS, minlat:maxlat:ICHUNKS]
     grid = griddata(geofeature[['longitude', 'latitude']], 
                     geofeature[[feature_name]], 
@@ -78,4 +78,4 @@ if __name__ == '__main__':
         new_feature = get_feature(df, f)
         df[args.feat_name] = new_feature
         df.to_parquet(f'{args.out_folder}/{filename}_new.parquet')
-        logging.info(f'Written file {args.out_folder}/{filename}_new.parquet, {i}/{len(df_paths)}')
+        logging.info(f'Written file {args.out_folder}/{filename}_new.parquet, {i+1}/{len(df_paths)}')
