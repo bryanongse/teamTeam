@@ -10,3 +10,4 @@ pandarallel
 geopy
 geopandas
 seaborn
+lightgbm[dask]
