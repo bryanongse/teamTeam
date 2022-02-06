@@ -1,3 +1,7 @@
+"""
+Requires feature csv to have LATITUDE, LONGITUDE, address columns
+"""
+
 import argparse
 import glob
 import os
@@ -61,7 +65,7 @@ if __name__ == '__main__':
         
         for j, feature_path in enumerate(feature_paths):
             feat_name = os.path.basename(feature_path).split('_')[0]
-            feature_df = pd.read_csv(feature_path)
+            feature_df = pd.read_csv(feature_path)[['address', 'LATITUDE', 'LONGITUDE']]
             feature_gdf = gpd.GeoDataFrame(feature_df, 
                 geometry=gpd.points_from_xy(feature_df.LATITUDE, feature_df.LONGITUDE))
 

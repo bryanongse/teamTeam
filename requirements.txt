@@ -7,3 +7,6 @@ pyarrow
 fastparquet
 ipdb
 pandarallel
+geopy
+geopandas
+seaborn
