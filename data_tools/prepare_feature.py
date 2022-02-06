@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import logging
 
 import pandas as pd
 from scipy.interpolate import griddata, RegularGridInterpolator
@@ -9,6 +10,8 @@ import matplotlib.pyplot as plt
 
 CHUNKS = 1000
 ICHUNKS = 1000j
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 
 def get_interpolate_fn(geodf: pd.DataFrame,
@@ -51,12 +54,16 @@ def get_feature(geodf: pd.DataFrame,
     return df[['rawlat', 'rawlng']].apply(interpolate_feature, args=(f,), axis=1)
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--df_folder', type=str)
     parser.add_argument('--feature_csv', type=str)
+    parser.add_argument('--out_folder', type=str)
+    parser.add_argument('--feat_name', type=str)
     args = parser.parse_args()
+
+    if not os.path.exists(args.out_folder):
+        os.makedirs(args.out_folder)
 
     feature_df = pd.read_csv(args.feature_csv)
     df_paths = [i for i in glob.glob(
@@ -64,9 +71,9 @@ if __name__ == '__main__':
     
     for i, df_path in enumerate(df_paths):
         df = pd.read_parquet(df_path)
-        grid, f = get_interpolate_fn(df, feature_df, feature_name='population_2020')
-        generate_plot(grid, df, out_path=f'heatmap{i}.png')
+        grid, f = get_interpolate_fn(df, feature_df, feature_name=args.feat_name)
+        generate_plot(grid, df, out_path=f'{args.out_folder}/{df_path}_heatmap.png')
 
         new_feature = get_feature(df, f)
-        df['population_2020'] = new_feature
-        df.to_parquet(f'new_df{i}.parquet')
+        df[args.feat_name] = new_feature
+        df.to_parquet(f'{args.out_folder}/{df_path}_new.parquet')
