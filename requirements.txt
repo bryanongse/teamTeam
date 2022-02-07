@@ -11,3 +11,4 @@ geopy
 geopandas
 seaborn
 lightgbm[dask]
+folium
