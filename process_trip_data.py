@@ -74,7 +74,8 @@ def compute_distance(df: pd.DataFrame):
     return df_dist.groupby('trj_id').aggregate({'dist': 'sum'})
 
 
-def generate_trip_info(df: pd.DataFrame):
+def generate_trip_info(df: pd.DataFrame,
+                       is_social_factors: bool = False):
 
     trip_info = df.groupby('trj_id').agg(
         {'trj_id': 'first', 'driving_mode': 'first', 'osname': 'first'})
@@ -96,35 +97,37 @@ def generate_trip_info(df: pd.DataFrame):
     trip_info['distance'] = compute_distance(df)
     logging.info(f'Computed distanes')
 
-    trip_info['crowded_cost_raw'] = grouped['population_2020'].aggregate('sum') # has 162 na
-    trip_info['col_cost_raw'] = grouped['real_value'].aggregate('sum') # has 240725 na
-    trip_info['school_cost_raw'] = grouped['school_dst'].aggregate('sum')
-    trip_info['supermarket_cost_raw'] = grouped['supermarket_dst'].aggregate('sum')
-    trip_info['mrt_cost_raw'] = grouped['MRT_dst'].aggregate('sum')
-    trip_info['parks_cost_raw'] = grouped['parks_dst'].aggregate('sum')
-    trip_info['hawker_cost_raw'] = grouped['hawker_dst'].aggregate('sum')
-    trip_info['mall_cost_raw'] = grouped['shoppingmall_dst'].aggregate('sum')
-    
-    features = df.groupby('trj_id').agg(
-        {'is_crowded': 'mean', 
-        'is_real_value': 'mean', 
-        'is_near_school': 'mean',
-        'is_near_supermarket': 'mean',
-        'is_near_mrt': 'mean',
-        'is_near_park': 'mean',
-        'is_near_hawker': 'mean',
-        'is_near_mall': 'mean',
-        'crowded_cost': 'sum',
-        'col_cost': 'sum',
-        'school_cost': 'sum',
-        'supermarket_cost': 'sum',
-        'mrt_cost': 'sum',
-        'park_cost': 'sum',
-        'hawker_cost': 'sum',
-        'mall_cost': 'sum',
-        })
+    if is_social_factors:
+        trip_info['crowded_cost_raw'] = grouped['population_2020'].aggregate('sum') # has 162 na
+        trip_info['col_cost_raw'] = grouped['real_value'].aggregate('sum') # has 240725 na
+        trip_info['school_cost_raw'] = grouped['school_dst'].aggregate('sum')
+        trip_info['supermarket_cost_raw'] = grouped['supermarket_dst'].aggregate('sum')
+        trip_info['mrt_cost_raw'] = grouped['MRT_dst'].aggregate('sum')
+        trip_info['parks_cost_raw'] = grouped['parks_dst'].aggregate('sum')
+        trip_info['hawker_cost_raw'] = grouped['hawker_dst'].aggregate('sum')
+        trip_info['mall_cost_raw'] = grouped['shoppingmall_dst'].aggregate('sum')
+        
+        features = df.groupby('trj_id').agg(
+            {'is_crowded': 'mean', 
+            'is_real_value': 'mean', 
+            'is_near_school': 'mean',
+            'is_near_supermarket': 'mean',
+            'is_near_mrt': 'mean',
+            'is_near_park': 'mean',
+            'is_near_hawker': 'mean',
+            'is_near_mall': 'mean',
+            'crowded_cost': 'sum',
+            'col_cost': 'sum',
+            'school_cost': 'sum',
+            'supermarket_cost': 'sum',
+            'mrt_cost': 'sum',
+            'park_cost': 'sum',
+            'hawker_cost': 'sum',
+            'mall_cost': 'sum',
+            })
 
-    trip_info = pd.concat((trip_info, features), axis=1)
+        trip_info = pd.concat((trip_info, features), axis=1)
+    
     return trip_info
 
 
@@ -132,6 +135,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--df_folder', type=str)
     parser.add_argument('--out_folder', type=str)
+    parser.add_argument('--is_social_factor', action='store_true', default=False)
     args = parser.parse_args()
 
     if not os.path.exists(args.out_folder):
@@ -145,13 +149,14 @@ if __name__ == '__main__':
         ping_df = read_gps_ping_data(df_path)
         logging.info(f'Read {df_path}')
 
-        plot_feature_dist(ping_df, f'{args.out_folder}/{filename}')
-        logging.info(f'Output distribution plots to {args.out_folder}/{filename}')
+        if args.is_social_factor:        
+            plot_feature_dist(ping_df, f'{args.out_folder}/{filename}')
+            logging.info(f'Output distribution plots to {args.out_folder}/{filename}')
 
-        ping_df = get_intermediate_feature(ping_df)
-        logging.info(f'Generated intermediate features')
+            ping_df = get_intermediate_feature(ping_df)
+            logging.info(f'Generated intermediate features')
 
-        trip_info = generate_trip_info(ping_df)
+        trip_info = generate_trip_info(ping_df, is_social_factors=args.is_social_factor)
         logging.info(f'Generated trip info')
         
         trip_info.to_parquet(f'{args.out_folder}/trip_info_{filename}.parquet')
