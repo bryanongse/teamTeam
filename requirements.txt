@@ -12,3 +12,4 @@ geopandas
 seaborn
 lightgbm[dask]
 folium
+joypy
