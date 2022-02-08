@@ -13,3 +13,5 @@ seaborn
 lightgbm[dask]
 folium
 joypy
+statmodels
+yellowbrick
